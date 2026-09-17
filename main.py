@@ -14,22 +14,32 @@ GROUP_ID = subprocess.check_output(['id', '-g'], text=True).strip()
 DOCKER_MMDC = ["docker", "run", "--rm", "-u", f"{USER_ID}:{GROUP_ID}", "-v", ".:/data", "minlag/mermaid-cli"]
 
 class Node:
-    def __init__(self, name = None, title = None, description = None):
+    def __init__(self, id_ = None, name = None, title = None, description = None, type_ = None):
+        self._id = id_
         self._name = name
         self._title = title
         self._description = description
+        self._type = type_
+    def id(self):
+        return self._id
     def name(self):
         return self._name
     def title(self):
         return self._title
     def description(self):
         return self._description
+    def type(self):
+        #TODO
+        return self._type
+    def __str__(self):
+        #TODO
+        return f"{self.name()}{self.type()}"
 class Edge:
     def __init__(self, source: Node = None, target: Node = None):
         self._source = source
         self._target = target
     def __str__(self):
-        return f"{self._source.name()} --> {self._target.name()}"
+        return f"{self._source.id()} --> {self._target.id()}"
 
 class Commit(Node):
     def __init__(self, hash = None, tree = None, parents = None, author = None, committer = None, message = None):
@@ -43,8 +53,6 @@ class Commit(Node):
         return self._hash
     def short_hash(self):
         return self._hash[:7]
-    def __str__(self):
-        return self.hash()
     def set_tree(self, tree):
         self._tree = tree
     def add_parent(self, parent):
@@ -60,6 +68,9 @@ class Commit(Node):
     def get_parents(self):
         return self._parents
     @override
+    def id(self):
+        return self.hash()
+    @override
     def name(self):
         return self.short_hash()
     @override
@@ -68,6 +79,11 @@ class Commit(Node):
     @override
     def description(self):
         return f"tree {self._tree}\n" + "\n".join(f"parent {parent}" for parent in self._parents) + f"\nauthor {self._author}\ncommitter {self._committer}\n\n{self._message}"
+    @override
+    def type(self):
+        return '([])'
+    def __str__(self):
+        return f"{self.id()}([{self.name()}])"
 class Branch(Node):
     def __init__(self, name = None, commit = None):
         self._name = name
@@ -79,6 +95,9 @@ class Branch(Node):
     def get_commit(self):
         return self._commit
     @override
+    def id(self):
+        return self._name
+    @override
     def name(self):
         return self._name
     @override
@@ -87,6 +106,8 @@ class Branch(Node):
     @override
     def description(self):
         return f"branch {self._name}\ncommit {self._commit}"
+    def __str__(self):
+        return f"{self.id()}[{self.name()}]"
 
 edges: list[Edge] = []
 
@@ -131,6 +152,8 @@ for branch in branches.values():
 # Generate Mermaid text
 
 mermaid_text = 'graph RL\n'
+for node in list(commits.values()) + list(branches.values()):
+    mermaid_text += f"    {node}\n"
 for edge in edges:
     mermaid_text += f"    {edge}\n"
 
