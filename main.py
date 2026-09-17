@@ -76,6 +76,8 @@ class Branch(Node):
         return self._commit
     def set_commit(self, commit):
         self._commit = commit
+    def get_commit(self):
+        return self._commit
     @override
     def name(self):
         return self._name
@@ -124,7 +126,7 @@ for commit in commits.values():
     for parent_hash in commit.get_parents():
         edges.append(Edge(source=commit, target=commits[parent_hash]))  # Add edges from commit to its parents
 for branch in branches.values():
-    edges.append(Edge(source=branch, target=commits[commit_hash]))  # Add edge from branch to commit
+    edges.append(Edge(source=branch, target=commits[branch.get_commit()]))  # Add edge from branch to commit
 
 # Generate Mermaid text
 
