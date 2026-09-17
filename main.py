@@ -32,10 +32,10 @@ class Edge:
         return f"{self._source.name()} --> {self._target.name()}"
 
 class Commit(Node):
-    def __init__(self, hash = None, tree = None, parents = [], author = None, committer = None, message = None):
+    def __init__(self, hash = None, tree = None, parents = None, author = None, committer = None, message = None):
         self._hash = hash
         self._tree = tree
-        self._parents = parents
+        self._parents = parents if parents else []
         self._author = author
         self._committer = committer
         self._message = message
@@ -45,6 +45,20 @@ class Commit(Node):
         return self._hash[:7]
     def __str__(self):
         return self.hash()
+    def set_tree(self, tree):
+        self._tree = tree
+    def add_parent(self, parent):
+        if parent in self._parents:
+            return
+        self._parents.append(parent)
+    def set_author(self, author):
+        self._author = author
+    def set_committer(self, commiter):
+        self._commiter = commiter
+    def set_message(self, message):
+        self._message = message
+    def get_parents(self):
+        return self._parents
     @override
     def name(self):
         return self.short_hash()
@@ -60,6 +74,8 @@ class Branch(Node):
         self._commit = commit
     def commit(self):
         return self._commit
+    def set_commit(self, commit):
+        self._commit = commit
     @override
     def name(self):
         return self._name
@@ -75,23 +91,39 @@ edges: list[Edge] = []
 all_commit_hashes = subprocess.check_output(['git', '-C', REPO, 'rev-list', '--all'], text=True).strip().split('\n')
 commits: dict[str, Commit] = {commit_hash : Commit(hash=commit_hash) for commit_hash in all_commit_hashes}
 
+# generate commits
 for commit in commits.values():
-    #TODO Commitオブジェクトの生成とEdgeの生成を分ける
-    try:
-        parent_hashes = subprocess.check_output(['git', '-C', REPO, 'rev-list', '--parents', '-n', '1', commit.hash()], text=True).strip().split()[1:]
-    except subprocess.CalledProcessError:
-        break  # No parents for this commit
-    for parent_hash in parent_hashes:
-        edges.append(Edge(source=commit, target=commits[parent_hash]))  # Add edges from commit to its parents
+    res_lines = subprocess.check_output(['git', '-C', REPO, 'cat-file', '-p', commit.hash()], text=True).strip().split('\n')
+    for i, res_line in enumerate(res_lines):
+        if res_line[0:5] == 'tree ':
+            commit.set_tree(res_line[5:])
+        elif res_line[0:7] == 'parent ':
+            commit.add_parent(res_line[7:])
+        elif res_line[0:7] == 'author ':
+            commit.set_author(res_line[7:])
+        elif res_line[0:10] == 'committer ':
+            commit.set_committer(res_line[10:])
+        elif res_line == '':
+            commit.set_message("\n".join(res_lines[i+1:]))
+            break
+        else:
+            print(f"attribute not found for line ({res_line}).")
 
+# generate branches
 res = subprocess.check_output(['git', '-C', REPO, 'branch', '--list'], text=True).strip().split('\n')
 branch_names = [r.lstrip('* ') for r in res if r]
 branches: dict[str, Branch] = {branch_name: Branch(name=branch_name) for branch_name in branch_names}
 print(branches) # debug
-
 for branch in branches.values():
-    #TODO Branchオブジェクトの生成とEdgeの生成を分ける
     commit_hash = subprocess.check_output(['git', '-C', REPO, 'rev-parse', branch.name()], text=True).strip()
+    branch.set_commit(commit_hash)
+
+
+# generate edges
+for commit in commits.values():
+    for parent_hash in commit.get_parents():
+        edges.append(Edge(source=commit, target=commits[parent_hash]))  # Add edges from commit to its parents
+for branch in branches.values():
     edges.append(Edge(source=branch, target=commits[commit_hash]))  # Add edge from branch to commit
 
 # Generate Mermaid text
