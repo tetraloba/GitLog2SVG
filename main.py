@@ -4,7 +4,7 @@ from typing import override
 from bs4 import BeautifulSoup
 
 # REPO="../databases"
-REPO = "./tmp"
+REPO = "../tlserver_conf"
 OUT_MD = "out.md"
 OUT_MMD = "out.mmd"
 OUT_SVG = "out.svg"
@@ -112,7 +112,7 @@ for commit in commits.values():
             print(f"attribute not found for line ({res_line}).")
 
 # generate branches
-res = subprocess.check_output(['git', '-C', REPO, 'branch', '--list'], text=True).strip().split('\n')
+res = subprocess.check_output(['git', '-C', REPO, 'branch', '-a', '--format=%(refname:short)'], text=True).strip().split('\n')
 branch_names = [r.lstrip('* ') for r in res if r]
 branches: dict[str, Branch] = {branch_name: Branch(name=branch_name) for branch_name in branch_names}
 print(branches) # debug
