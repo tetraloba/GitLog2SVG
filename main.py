@@ -83,7 +83,7 @@ class Commit(Node):
     def type(self):
         return '([])'
     def __str__(self):
-        return f"{self.id()}([{self.name()}])"
+        return f"{self.id()}(({self.name()}))"
 class Branch(Node):
     def __init__(self, name = None, commit = None):
         self._name = name
