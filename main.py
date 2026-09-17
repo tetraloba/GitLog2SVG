@@ -130,7 +130,7 @@ for branch in branches.values():
 
 # Generate Mermaid text
 
-mermaid_text = 'graph\n'
+mermaid_text = 'graph RL\n'
 for edge in edges:
     mermaid_text += f"    {edge}\n"
 
